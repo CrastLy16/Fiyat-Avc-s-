@@ -1,0 +1,42 @@
+name: Bulut Fiyat Tarayicisi (30 dk)
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'cloud_monitor/watchlist.json'
+      - 'cloud_monitor/check_prices.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cloud-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu indir
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Playwright ve kutuphaneleri kur
+        run: |
+          pip install requests beautifulsoup4 playwright
+          playwright install chromium
+
+      - name: 7 sitede fiyat ve indirim taramasi yap
+        run: python cloud_monitor/check_prices.py
+
+      - name: Guncel deals_snapshot.json dosyasini kaydet
+        run: |
+          git config user.name "FiyatAvcisi Bulut Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add cloud_monitor/deals_snapshot.json
+          git diff --staged --quiet || git commit -m "Bulut fiyat taramasi guncellendi"
+          git push
